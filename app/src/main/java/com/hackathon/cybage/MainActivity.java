@@ -30,9 +30,10 @@ import com.google.gson.JsonObject;
 
 import org.json.JSONException;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends Activity implements GoogleMap.OnMarkerClickListener, OnMapReadyCallback, LocationListener, AsyncTaskComplete {
+public class MainActivity extends Activity implements GoogleMap.OnMarkerClickListener, OnMapReadyCallback, LocationListener, GoogleMap.OnCameraMoveListener, AsyncTaskComplete {
     private TextView latituteField;
     private TextView longitudeField;
     private LocationManager locationManager;
@@ -42,7 +43,8 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
     private FloatingActionButton addMarker;
     private Location location;
     private ActionHandler actionHandler;
-    private List<LatLng> locations;
+    private float accuracy;
+    private List<Marker> markers;
     /**
      * Called when the activity is first created.
      */
@@ -53,12 +55,12 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
         actionHandler = new ActionHandler(MainActivity.this, this);
         latituteField = (TextView) findViewById(R.id.TextView02);
         longitudeField = (TextView) findViewById(R.id.TextView04);
-
+        markers = new ArrayList<>(128);
         addMarker = (FloatingActionButton) findViewById(R.id.addMarkerFAB);
         addMarker.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (location.getAccuracy() > 8) {
+                if (accuracy > 8) {
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Poor GPS Accuracy")
                             .setMessage("Please try after some time, ensure you are outdoor.\nCurrent Accuracy:" + location.getAccuracy())
@@ -76,6 +78,7 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
                             .setPositiveButton("Mark Now", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
                                     actionHandler.addLocation(latLng.latitude, latLng.longitude);
+                                    markers.add(new MarkerOptions().position(latLng).title("Use Me"));
                                 }
                             })
                             .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -229,6 +232,9 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
     @Override
     public void handleResult(JsonObject result, String action) throws JSONException {
         if (result.get("success").getAsInt() == -1) {
+            if (action.equals("Add")) {
+                markers.remove(markers.size() - 1);
+            }
             //TODO : Alert box
             new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Server not Reachable")
@@ -242,6 +248,7 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
                     .show();
         }
         if (action.equals("Add") && result.get("success").getAsInt() == 1) {
+            mMap.addMarker(markers.get(markers.size() - 1));
             new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Thank You")
                     .setMessage("Thank you for contributing to the society !")
@@ -256,25 +263,41 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
         if (action.equals("Fetch") && result.get("success").getAsInt() == 1) {
             JsonArray jsonArray = result.getAsJsonArray("locations");
             for (int i = 0; i < jsonArray.size(); i++) {
-                mMap.addMarker(new MarkerOptions().position(new LatLng(jsonArray.get(i).getAsJsonObject().get("latitude").getAsDouble(), jsonArray.get(i).getAsJsonObject().get("longitude").getAsDouble())).title("Use Me"));
+                mMap.addMarker(new MarkerOptions()
+                        .position(new LatLng(jsonArray.get(i).getAsJsonObject().get("latitude").getAsDouble(), jsonArray.get(i).getAsJsonObject().get("longitude").getAsDouble()))
+                        .title("Use Me"));
+                mMap.setOnMarkerClickListener(this);
             }
 
         }
     }
 
     @Override
-    public boolean onMarkerClick(Marker marker) {
+    public boolean onMarkerClick(final Marker marker) {
         Math.sqrt(Math.pow(location.getLatitude(), 2) - Math.pow(marker.getPosition().latitude, 2) + Math.pow(location.getLongitude(), 2) - Math.pow(marker.getPosition().longitude, 2));
         new AlertDialog.Builder(MainActivity.this)
-                .setTitle("Rate this place")
+                .setTitle("Review this place")
                 .setMessage("Did you find a dustbin here?")
-                .setPositiveButton("Mark More", new DialogInterface.OnClickListener() {
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
+                        actionHandler.review(marker.getPosition().latitude, marker.getPosition().longitude, 1);
                         dialog.dismiss();
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        actionHandler.review(marker.getPosition().latitude, marker.getPosition().longitude, -1);
+                        dialogInterface.dismiss();
                     }
                 })
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
         return false;
+    }
+
+    @Override
+    public void onCameraMove() {
+        actionHandler.fetchLocations(latLng.latitude, latLng.longitude);
     }
 }

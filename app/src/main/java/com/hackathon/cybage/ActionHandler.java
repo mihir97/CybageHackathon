@@ -40,6 +40,27 @@ public class ActionHandler {
 
     }
 
+    public void review(Double latitude, Double longitude, int review) {
+        PostJsonObject(createreviewjsonobject(latitude, longitude, review), server_url, "Review", "Updating Server\nPlease Wait");
+    }
+
+    private JsonObject createreviewjsonobject(Double latitude, Double longitude, int review) {
+        JsonObject jsonObject = new JsonObject();
+
+        try {
+            jsonObject.addProperty("action", "Review");
+            jsonObject.addProperty("latitude", String.valueOf(latitude));
+            jsonObject.addProperty("longitude", String.valueOf(longitude));
+            jsonObject.addProperty("review", review);
+            return jsonObject;
+
+        } catch (JsonIOException e) {
+            e.printStackTrace();
+        }
+        return null;
+
+    }
+
 
     public void fetchLocations(Double latitude, Double longitude) {
         PostJsonObject(createfetchLocationsitem(latitude, longitude), server_url, "Fetch", "");
