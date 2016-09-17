@@ -5,6 +5,9 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
@@ -13,7 +16,6 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -21,6 +23,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -30,12 +33,7 @@ import com.google.gson.JsonObject;
 
 import org.json.JSONException;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class MainActivity extends Activity implements GoogleMap.OnMarkerClickListener, OnMapReadyCallback, LocationListener, GoogleMap.OnCameraMoveListener, AsyncTaskComplete {
-    private TextView latituteField;
-    private TextView longitudeField;
+public class MainActivity extends Activity implements GoogleMap.OnMarkerClickListener, OnMapReadyCallback, LocationListener, AsyncTaskComplete {
     private LocationManager locationManager;
     private String provider;
     private GoogleMap mMap;
@@ -44,7 +42,6 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
     private Location location;
     private ActionHandler actionHandler;
     private float accuracy;
-    private List<Marker> markers;
     /**
      * Called when the activity is first created.
      */
@@ -53,9 +50,6 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         actionHandler = new ActionHandler(MainActivity.this, this);
-        latituteField = (TextView) findViewById(R.id.TextView02);
-        longitudeField = (TextView) findViewById(R.id.TextView04);
-        markers = new ArrayList<>(128);
         addMarker = (FloatingActionButton) findViewById(R.id.addMarkerFAB);
         addMarker.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -78,7 +72,6 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
                             .setPositiveButton("Mark Now", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
                                     actionHandler.addLocation(latLng.latitude, latLng.longitude);
-                                    markers.add(new MarkerOptions().position(latLng).title("Use Me"));
                                 }
                             })
                             .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -117,9 +110,6 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
         if (location != null) {
             System.out.println("Provider " + provider + " has been selected.");
             onLocationChanged(location);
-        } else {
-            latituteField.setText("Location not available");
-            longitudeField.setText("Location not available");
         }
     }
 
@@ -164,8 +154,6 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
     public void onLocationChanged(Location location) {
         double lat = (location.getLatitude());
         double lng = (location.getLongitude());
-        latituteField.setText(String.valueOf(lat));
-        longitudeField.setText(String.valueOf(lng));
         latLng = new LatLng(lat, lng);
 
         if (mMap != null) {
@@ -232,9 +220,6 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
     @Override
     public void handleResult(JsonObject result, String action) throws JSONException {
         if (result.get("success").getAsInt() == -1) {
-            if (action.equals("Add")) {
-                markers.remove(markers.size() - 1);
-            }
             //TODO : Alert box
             new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Server not Reachable")
@@ -248,10 +233,25 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
                     .show();
         }
         if (action.equals("Add") && result.get("success").getAsInt() == 1) {
-            mMap.addMarker(markers.get(markers.size() - 1));
             new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Thank You")
                     .setMessage("Thank you for contributing to the society !")
+                    .setPositiveButton("Mark More", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            mMap.addMarker(new MarkerOptions().position(latLng)
+                                    .title("Use Me")
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker))
+                            );
+                            dialog.dismiss();
+                        }
+                    })
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
+        }
+        if (action.equals("Add") && result.get("success").getAsInt() == 0) {
+            new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("Duplicate")
+                    .setMessage("This location is already registered.")
                     .setPositiveButton("Mark More", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             dialog.dismiss();
@@ -263,18 +263,49 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
         if (action.equals("Fetch") && result.get("success").getAsInt() == 1) {
             JsonArray jsonArray = result.getAsJsonArray("locations");
             for (int i = 0; i < jsonArray.size(); i++) {
+                Drawable d = getResources().getDrawable(R.drawable.marker);
+                BitmapDrawable bd = (BitmapDrawable) d.getCurrent();
+                Bitmap b = bd.getBitmap();
+                Bitmap resized = Bitmap.createScaledBitmap(b, 70, 80, false);
+
                 mMap.addMarker(new MarkerOptions()
                         .position(new LatLng(jsonArray.get(i).getAsJsonObject().get("latitude").getAsDouble(), jsonArray.get(i).getAsJsonObject().get("longitude").getAsDouble()))
-                        .title("Use Me"));
+                        .title("Use Me")
+                        .icon(BitmapDescriptorFactory.fromBitmap(resized))
+                );
                 mMap.setOnMarkerClickListener(this);
             }
 
         }
     }
 
+    private Drawable resize(Drawable image) {
+        Bitmap b = ((BitmapDrawable) image).getBitmap();
+        Bitmap bitmapResized = Bitmap.createScaledBitmap(b, 50, 50, false);
+        return new BitmapDrawable(getResources(), bitmapResized);
+    }
     @Override
     public boolean onMarkerClick(final Marker marker) {
-        Math.sqrt(Math.pow(location.getLatitude(), 2) - Math.pow(marker.getPosition().latitude, 2) + Math.pow(location.getLongitude(), 2) - Math.pow(marker.getPosition().longitude, 2));
+        //Math.sqrt(Math.pow(location.getLatitude(), 2) - Math.pow(marker.getPosition().latitude, 2) + Math.pow(location.getLongitude(), 2) - Math.pow(marker.getPosition().longitude, 2));
+  /*      Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialoglayout);
+        dialog.setTitle("Use Me");
+        dialog.show();
+
+        Button navigate = (Button) dialog.findViewById(R.id.navigate_dialog);
+        Button yes = (Button) dialog.findViewById(R.id.yes_dialog);
+        Button no = (Button) dialog.findViewById(R.id.no_dialog);
+
+        navigate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(android.content.Intent.ACTION_VIEW,
+                        Uri.parse("geo:"+String.valueOf(marker.getPosition().latitude)+","+String.valueOf(marker.getPosition().longitude)));
+
+                startActivity(intent);
+            }
+        });
+*/
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Review this place")
                 .setMessage("Did you find a dustbin here?")
@@ -291,13 +322,15 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
                         dialogInterface.dismiss();
                     }
                 })
+                .setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                    }
+                })
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
         return false;
     }
 
-    @Override
-    public void onCameraMove() {
-        actionHandler.fetchLocations(latLng.latitude, latLng.longitude);
-    }
 }
