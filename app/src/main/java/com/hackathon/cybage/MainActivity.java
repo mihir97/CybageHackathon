@@ -286,26 +286,6 @@ public class MainActivity extends Activity implements GoogleMap.OnMarkerClickLis
     }
     @Override
     public boolean onMarkerClick(final Marker marker) {
-        //Math.sqrt(Math.pow(location.getLatitude(), 2) - Math.pow(marker.getPosition().latitude, 2) + Math.pow(location.getLongitude(), 2) - Math.pow(marker.getPosition().longitude, 2));
-  /*      Dialog dialog = new Dialog(this);
-        dialog.setContentView(R.layout.dialoglayout);
-        dialog.setTitle("Use Me");
-        dialog.show();
-
-        Button navigate = (Button) dialog.findViewById(R.id.navigate_dialog);
-        Button yes = (Button) dialog.findViewById(R.id.yes_dialog);
-        Button no = (Button) dialog.findViewById(R.id.no_dialog);
-
-        navigate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(android.content.Intent.ACTION_VIEW,
-                        Uri.parse("geo:"+String.valueOf(marker.getPosition().latitude)+","+String.valueOf(marker.getPosition().longitude)));
-
-                startActivity(intent);
-            }
-        });
-*/
         new AlertDialog.Builder(MainActivity.this)
                 .setTitle("Review this place")
                 .setMessage("Did you find a dustbin here?")
