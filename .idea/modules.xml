@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Cybage.iml" filepath="$PROJECT_DIR$/Cybage.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/cybage.iml" filepath="$PROJECT_DIR$/cybage.iml" />
     </modules>
   </component>
 </project>
