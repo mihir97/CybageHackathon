@@ -4,8 +4,9 @@ Most of the people now-a-days don't want to litter surroundings but have problem
 this app addresses this issue and allows users to locate dustbin and share its location with others.
 The app can be used anonymously but has a review feature to avoid spamming.
 The app shows you nearby locations of dustbins reported by other users and users can get navigation directions to those.
+
 APK: https://drive.google.com/open?id=0BxFji4t7olihTHBkWk1HYkZXOXM
-Bookmark (accesskey h) Help (accesskey i) Logout (accesskey l)
+
 
 How to use the App:
 
