@@ -23,11 +23,16 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import org.json.JSONException;
 
-public class MainActivity extends Activity implements OnMapReadyCallback, LocationListener, AsyncTaskComplete {
+import java.util.List;
+
+public class MainActivity extends Activity implements GoogleMap.OnMarkerClickListener, OnMapReadyCallback, LocationListener, AsyncTaskComplete {
     private TextView latituteField;
     private TextView longitudeField;
     private LocationManager locationManager;
@@ -37,7 +42,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
     private FloatingActionButton addMarker;
     private Location location;
     private ActionHandler actionHandler;
-
+    private List<LatLng> locations;
     /**
      * Called when the activity is first created.
      */
@@ -53,7 +58,6 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
         addMarker.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(MainActivity.this, "Current Accuracy :" + location.getAccuracy(), Toast.LENGTH_SHORT).show();
                 if (location.getAccuracy() > 8) {
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Poor GPS Accuracy")
@@ -152,6 +156,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
         locationManager.removeUpdates(this);
     }
 
+
     @Override
     public void onLocationChanged(Location location) {
         double lat = (location.getLatitude());
@@ -159,6 +164,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
         latituteField.setText(String.valueOf(lat));
         longitudeField.setText(String.valueOf(lng));
         latLng = new LatLng(lat, lng);
+
         if (mMap != null) {
             goToLatLng(latLng);
         }
@@ -213,6 +219,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
         CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(cameraPosition);
         mMap.moveCamera(cameraUpdate);
         goToLatLng(latLng);
+        actionHandler.fetchLocations(latLng.latitude, latLng.longitude);
     }
 
     void goToLatLng(LatLng latLng) {
@@ -246,5 +253,28 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
                     .setIcon(android.R.drawable.ic_dialog_alert)
                     .show();
         }
+        if (action.equals("Fetch") && result.get("success").getAsInt() == 1) {
+            JsonArray jsonArray = result.getAsJsonArray("locations");
+            for (int i = 0; i < jsonArray.size(); i++) {
+                mMap.addMarker(new MarkerOptions().position(new LatLng(jsonArray.get(i).getAsJsonObject().get("latitude").getAsDouble(), jsonArray.get(i).getAsJsonObject().get("longitude").getAsDouble())).title("Use Me"));
+            }
+
+        }
+    }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        Math.sqrt(Math.pow(location.getLatitude(), 2) - Math.pow(marker.getPosition().latitude, 2) + Math.pow(location.getLongitude(), 2) - Math.pow(marker.getPosition().longitude, 2));
+        new AlertDialog.Builder(MainActivity.this)
+                .setTitle("Rate this place")
+                .setMessage("Did you find a dustbin here?")
+                .setPositiveButton("Mark More", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+        return false;
     }
 }

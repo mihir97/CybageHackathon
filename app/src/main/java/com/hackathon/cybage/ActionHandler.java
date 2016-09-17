@@ -40,11 +40,12 @@ public class ActionHandler {
 
     }
 
-    public void fetchLocation(Double latitude, Double longitude) {
-        PostJsonObject(createfetchLocationitem(latitude, longitude), server_url, "Fetch", "Querying from Server\nPlease Wait");
+
+    public void fetchLocations(Double latitude, Double longitude) {
+        PostJsonObject(createfetchLocationsitem(latitude, longitude), server_url, "Fetch", "");
     }
 
-    private JsonObject createfetchLocationitem(Double latitude, Double longitude) {
+    private JsonObject createfetchLocationsitem(Double latitude, Double longitude) {
         JsonObject jsonObject = new JsonObject();
 
         try {
