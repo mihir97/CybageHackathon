@@ -8,6 +8,10 @@ The app shows you nearby locations of dustbins reported by other users and users
 How to use the App:
 
 ->Markers show the locations of nearby dustbins
+
 ->By clicking on these markers the status of the dustbin can be reported
+
 ->By clicking on a marker and clicking the navigation button on right bottom you can get directions to that marker
+
 ->New markers can be added at the current location using the fab button provided
+
