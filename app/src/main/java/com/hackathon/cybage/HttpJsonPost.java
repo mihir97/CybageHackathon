@@ -4,7 +4,6 @@ package com.hackathon.cybage;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.AsyncTask;
-import android.widget.Toast;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -29,13 +28,14 @@ public class HttpJsonPost extends AsyncTask<JsonObject, Integer, JsonObject> {
     private Context context;
     private ProgressDialog progressDialog;
     private AsyncTaskComplete callback;
-    private JsonObject input;
+    private boolean progressbar;
 
     public HttpJsonPost(String url, String action, String progressinfo, Context context, AsyncTaskComplete callback) {
         this.context = context;
         this.url = url;
         this.callback = callback;
         this.action = action;
+        this.progressbar = !progressinfo.isEmpty();
         this.progressinfo = progressinfo;
     }
 
@@ -46,32 +46,35 @@ public class HttpJsonPost extends AsyncTask<JsonObject, Integer, JsonObject> {
 
     @Override
     protected void onPreExecute() {
-        progressDialog = new ProgressDialog(context);
-        progressDialog.setMessage(progressinfo);
-        progressDialog.setCancelable(false);
-        progressDialog.show();
+        if (progressbar) {
+            progressDialog = new ProgressDialog(context);
+            progressDialog.setMessage(progressinfo);
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+        }
     }
 
     @Override
     protected JsonObject doInBackground(JsonObject... params) {
-        this.input = params[0];
         return postJsonObject(params[0]);
     }
 
     @Override
     protected void onPostExecute(JsonObject result) {
-        progressDialog.dismiss();
-        if (result == null)
-            Toast.makeText(context, "Server not Reachable.Check Connection.", Toast.LENGTH_LONG).show();
+        if (progressbar) {
+            progressDialog.dismiss();
+        }
         try {
-            callback.handleResult(input, result, action);
+            callback.handleResult(result, action);
         } catch (JSONException e) {
             e.printStackTrace();
-
         }
+
     }
 
     private JsonObject postJsonObject(JsonObject jsonObject) {
+        JsonObject nullresult = new JsonObject();
+        nullresult.addProperty("success", -1);
         try {
             String data = jsonObject.toString();
             URL object = new URL(url);
@@ -83,8 +86,8 @@ public class HttpJsonPost extends AsyncTask<JsonObject, Integer, JsonObject> {
             httpURLConnection.setRequestProperty("Accept", "application/json");
             httpURLConnection.setRequestMethod("POST");
 
-            httpURLConnection.setConnectTimeout(6000);
-            httpURLConnection.setReadTimeout(25000);
+            httpURLConnection.setConnectTimeout(4000);
+            httpURLConnection.setReadTimeout(15000);
 
             OutputStreamWriter wr = new OutputStreamWriter(httpURLConnection.getOutputStream());
             wr.write(data);
@@ -101,7 +104,12 @@ public class HttpJsonPost extends AsyncTask<JsonObject, Integer, JsonObject> {
                 }
                 br.close();
             }
-            return new JsonParser().parse(sb.toString()).getAsJsonObject();
+            JsonObject result = new JsonParser().parse(sb.toString()).getAsJsonObject();
+
+            if (result != null)
+                return result;
+            else
+                return nullresult;
         } catch (ProtocolException e) {
             e.printStackTrace();
         } catch (MalformedJsonException e) {
@@ -109,6 +117,6 @@ public class HttpJsonPost extends AsyncTask<JsonObject, Integer, JsonObject> {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return null;
+        return nullresult;
     }
 }

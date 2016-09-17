@@ -1,7 +1,9 @@
 package com.hackathon.cybage;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
@@ -21,8 +23,11 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.gson.JsonObject;
 
-public class MainActivity extends Activity implements OnMapReadyCallback, LocationListener {
+import org.json.JSONException;
+
+public class MainActivity extends Activity implements OnMapReadyCallback, LocationListener, AsyncTaskComplete {
     private TextView latituteField;
     private TextView longitudeField;
     private LocationManager locationManager;
@@ -30,6 +35,9 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
     private GoogleMap mMap;
     private LatLng latLng;
     private FloatingActionButton addMarker;
+    private Location location;
+    private ActionHandler actionHandler;
+
     /**
      * Called when the activity is first created.
      */
@@ -37,6 +45,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+        actionHandler = new ActionHandler(MainActivity.this, this);
         latituteField = (TextView) findViewById(R.id.TextView02);
         longitudeField = (TextView) findViewById(R.id.TextView04);
 
@@ -44,7 +53,35 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
         addMarker.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //TODO: add add marker stuff
+                Toast.makeText(MainActivity.this, "Current Accuracy :" + location.getAccuracy(), Toast.LENGTH_SHORT).show();
+                if (location.getAccuracy() > 8) {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Poor GPS Accuracy")
+                            .setMessage("Please try after some time, ensure you are outdoor.\nCurrent Accuracy:" + location.getAccuracy())
+                            .setPositiveButton("Try Later", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            })
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show();
+                } else {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("Mark new dustbin")
+                            .setMessage("The current location will be marked as a spot with a dustbin.")
+                            .setPositiveButton("Mark Now", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    actionHandler.addLocation(latLng.latitude, latLng.longitude);
+                                }
+                            })
+                            .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            })
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show();
+                }
             }
         });
 
@@ -52,7 +89,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
         mapFragment.getMapAsync(this);
         // Get the location manager
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        // Define the criteria how to select the locatioin provider -> use
+        // Define the criteria how to select the locatioin provider use
         // default
         Criteria criteria = new Criteria();
         provider = locationManager.getBestProvider(criteria, false);
@@ -67,7 +104,7 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             return;
         }
-        Location location = locationManager.getLastKnownLocation(provider);
+        location = locationManager.getLastKnownLocation(provider);
 
         // Initialize the location fields
         if (location != null) {
@@ -182,4 +219,32 @@ public class MainActivity extends Activity implements OnMapReadyCallback, Locati
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
     }
 
+    @Override
+    public void handleResult(JsonObject result, String action) throws JSONException {
+        if (result.get("success").getAsInt() == -1) {
+            //TODO : Alert box
+            new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("Server not Reachable")
+                    .setMessage("Make sure you are connceted to the internet!")
+                    .setPositiveButton("Try Later", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    })
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
+        }
+        if (action.equals("Add") && result.get("success").getAsInt() == 1) {
+            new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("Thank You")
+                    .setMessage("Thank you for contributing to the society !")
+                    .setPositiveButton("Mark More", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    })
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
+        }
+    }
 }
